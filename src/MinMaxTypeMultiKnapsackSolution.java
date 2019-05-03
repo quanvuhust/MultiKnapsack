@@ -30,7 +30,8 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
     java.util.Random rand = null;
     HashMap<Integer, Double> sumWPerR = new HashMap<Integer, Double>();
     HashMap<Integer, ArrayList<Integer>> itemPerR = new HashMap<Integer, ArrayList<Integer>>();
-    HashMap<Integer, HashSet<Integer>> intersection = new HashMap<Integer, HashSet<Integer>>();
+
+    HashSet<Integer> newBinIndices[];
 
     ArrayList<Integer> availR = new ArrayList<Integer>();
 
@@ -61,6 +62,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
     }
 
     public void info() {
+        HashMap<Integer, HashSet<Integer>> intersection = new HashMap<Integer, HashSet<Integer>>();
         double tmp = 0;
         int maxR = -1;
         int r = -1;
@@ -141,7 +143,6 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
         sumWPerR.clear();
         availR.clear();
         itemPerR.clear();
-        intersection.clear();
 
         for (int i = 0; i < n; i++) {
             w = items[i].getW();
@@ -150,15 +151,11 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             if (!sumWPerR.containsKey(r)) {
                 sumWPerR.put(r, w);
                 itemPerR.put(r, new ArrayList<Integer>());
-                intersection.put(r, new HashSet<Integer>(binIndices));
             } else {
                 sumWPerR.replace(r, sumWPerR.get(r) + w);
-                intersection.get(r).retainAll(binIndices);
             }
             itemPerR.get(r).add(i);
         }
-
-        double maxWR = -1;
 
         for (Map.Entry<Integer, Double> entry : sumWPerR.entrySet()) {
             r = entry.getKey();
@@ -175,74 +172,99 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
 
             if (entry.getValue() >= minLoadR) {
                 availR.add(r);
-                if (maxWR < entry.getValue()) {
-                    maxWR = entry.getValue();
-                }
             }
         }
 
-        System.out.println("MAX W R = " + maxWR);
-        System.out.print("NOT USE BIN: ");
+        newBinIndices = new HashSet[n];
+        for(int i = 0; i < n; i++) {
+            newBinIndices[i] = new HashSet<Integer>();
+        }
 
-        for (int b = 0; b < m; b++) {
-            if (bins[b].getMinLoad() > maxWR) {
+        HashMap<Integer, Double> sumWRPerBin = new HashMap<Integer, Double>();
+        
+        int numBinUse = 0;
+        int numItemUse = 0;
+        for(int b = 0; b < m; b++) {
+            int flagUse = 0;
+            sumWRPerBin.clear();
+            for(int i = 0; i < n; i++) {
+                r = items[i].getR();
+
+                if (availR.contains(r)) {
+                    w = items[i].getW();
+                    binIndices = items[i].getBinIndices();
+                    if(binIndices.contains(b)) {
+                        if(!sumWRPerBin.containsKey(r)) {
+                            sumWRPerBin.put(r, w);
+                        } else {
+                            sumWRPerBin.replace(r, sumWRPerBin.get(r) + w);
+                        }
+                    }
+                }
+            }
+            double minload = bins[b].getMinLoad();
+            for (Map.Entry<Integer, Double> entry : sumWRPerBin.entrySet()) {
+                r = entry.getKey();
+                double sumWR = entry.getValue();
+                if(sumWR >= minload) {
+                    for(int i: itemPerR.get(r)) {
+                        binIndices = items[i].getBinIndices();
+                        if(binIndices.contains(b)) {
+                            flagUse = 1;
+                            newBinIndices[i].add(b);
+                        }
+                    }
+                }
+            }
+            if (flagUse == 1) {
+                numBinUse++;
+                binsUse.add(b);
+            } else {
                 bins[b].setUse(NOT_USE_FOREVER);
-                System.out.print(b + " ");
+            }
+        }
+
+        for (int i = 0; i < n; i++) {
+            if (!availR.contains(items[i].getR()) || newBinIndices[i].isEmpty()) {
+                take[i] = NOT_USE_FOREVER;
+            } else {
+                itemsUse.add(i);
+                numItemUse++;
             }
         }
 
         System.out.println("");
         System.out.println(availR);
+        System.out.println("Number bins is used: " + numBinUse);
+        System.out.println("Number items is used: " + numItemUse);
     }
 
     public void initModel() {
-        for (int i = 0; i < n; i++) {
-            if (!availR.contains(items[i].getR())) {
-                take[i] = NOT_USE_FOREVER;
-            } else {
-                itemsUse.add(i);
-            }
-        }
-
-        for (int b = 0; b < m; b++) {
-            if (bins[b].getUse() != NOT_USE_FOREVER) {
-                binsUse.add(b);
-            }
-        }
         rand = new Random();
         HashMap<Integer, Double> sumWPerBin = new HashMap<Integer, Double>();
-        Collections.shuffle(itemsUse);
-        Collections.shuffle(binsUse);
+        Collections.shuffle(itemsUse, new Random(System.nanoTime()));
+        Collections.shuffle(binsUse, new Random(System.nanoTime()));
 
         for (int i : itemsUse) {
             double w = items[i].getW();
-
-            for (int b : binsUse) {
-                if (items[i].getBinIndices().contains(bins[b].getId())) {
-                    if (!sumWPerBin.containsKey(b)) {
-                        sumWPerBin.put(b, w);
-                    } else {
-                        if (sumWPerBin.get(b) + w > bins[b].getCapacity()) {
-                            continue;
-                        }
-                        sumWPerBin.replace(b, sumWPerBin.get(b) + w);
+            ArrayList<Integer>  binIndices = new ArrayList<Integer>(newBinIndices[i]);
+            Collections.shuffle(binIndices, new Random(System.nanoTime()));
+            for (int b : binIndices) {
+                if (!sumWPerBin.containsKey(b)) {
+                    sumWPerBin.put(b, w);
+                } else {
+                    if (sumWPerBin.get(b) + w > bins[b].getCapacity()) {
+                        continue;
                     }
-                    take[i] = b;
-                    break;
+                    sumWPerBin.replace(b, sumWPerBin.get(b) + w);
                 }
+                take[i] = b;
+                break;
             }
         }
 
         printSolution();
         System.out.println("Init S = " + violations());
-        int sum_not_use = 0;
-
-        for (int i = 0; i < n; i++) {
-            if (take[i] == NOT_USE_FOREVER) {
-                sum_not_use += 1;
-            }
-        }
-        System.out.println("NOT USE FOREVER " + sum_not_use + " items");
     }
 
     public void resetArray(double a[]) {
@@ -277,7 +299,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             b = take[i];
 
             nItemPerBin[b] += 1;
-            binIndices = items[i].getBinIndices();
+            binIndices = newBinIndices[i];
             if (!binIndices.contains(bins[b].getId())) {
                 notInB[b] += 1;
             }
