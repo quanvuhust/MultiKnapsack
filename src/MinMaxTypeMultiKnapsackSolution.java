@@ -30,7 +30,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
     java.util.Random rand = null;
     HashMap<Integer, Double> sumWPerR = new HashMap<Integer, Double>();
     HashMap<Integer, ArrayList<Integer>> itemPerR = new HashMap<Integer, ArrayList<Integer>>();
-
+    HashSet<Integer> itemPerBin[];
     HashSet<Integer> newBinIndices[];
 
     ArrayList<Integer> availR = new ArrayList<Integer>();
@@ -62,7 +62,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
     }
 
     public void info() {
-        HashMap<Integer, HashSet<Integer>> intersection = new HashMap<Integer, HashSet<Integer>>();
+        //HashMap<Integer, HashSet<Integer>> intersection = new HashMap<Integer, HashSet<Integer>>();
         double tmp = 0;
         int maxR = -1;
         int r = -1;
@@ -85,7 +85,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
         }
         sumWPerR.clear();
         itemPerR.clear();
-        intersection.clear();
+        //intersection.clear();
 
         for (int i = 0; i < n; i++) {
             w = items[i].getW();
@@ -95,14 +95,14 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             if (!sumWPerR.containsKey(r)) {
                 sumWPerR.put(r, w);
                 itemPerR.put(r, new ArrayList<Integer>());
-                intersection.put(r, new HashSet<Integer>(binIndices));
+                //intersection.put(r, new HashSet<Integer>(binIndices));
             } else {
                 sumWPerR.replace(r, sumWPerR.get(r) + w);
-                intersection.get(r).retainAll(binIndices);
+                //intersection.get(r).retainAll(binIndices);
             }
             itemPerR.get(r).add(i);
         }
-
+        /*
         for (Map.Entry<Integer, HashSet<Integer>> entry : intersection.entrySet()) {
             r = entry.getKey();
             double minLoadR = Double.MAX_VALUE;
@@ -121,7 +121,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             }
             System.out.println();
 
-        }
+        }*/
         System.out.println("Number of items = " + n);
         System.out.println("Number of bins = " + m);
         System.out.println("Sum W (all Bins) = " + tmp);
@@ -130,19 +130,14 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
     }
 
     public void preprocess() {
-        double minLoad = Double.MAX_VALUE;
-
-        for (int i = 0; i < m; i++) {
-            if (minLoad > bins[i].getMinLoad()) {
-                minLoad = bins[i].getMinLoad();
-            }
-        }
         int r;
         double w;
         HashSet<Integer> binIndices;
         sumWPerR.clear();
         availR.clear();
         itemPerR.clear();
+        binsUse.clear();
+        itemsUse.clear();
 
         for (int i = 0; i < n; i++) {
             w = items[i].getW();
@@ -263,7 +258,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             }
         }
 
-        printSolution();
+        //printSolution();
         System.out.println("Init S = " + violations());
     }
 
@@ -295,7 +290,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
         }
         HashSet<Integer> binIndices;
 
-        for (int i : itemsUse) {
+        for (int i: itemsUse) {
             b = take[i];
 
             nItemPerBin[b] += 1;
@@ -348,6 +343,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
         take = new int[n];
         sumW = new double[m];
         sumP = new double[m];
+        itemPerBin = new HashSet[m];
         typePerBin = new HashMap[m];
         classPerBin = new HashMap[m];
         nTypePerBin = new int[m];
@@ -358,6 +354,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
         for (int b = 0; b < m; b++) {
             typePerBin[b] = new HashMap<Integer, Integer>();
             classPerBin[b] = new HashMap<Integer, Integer>();
+            itemPerBin[b] = new HashSet<Integer>();
         }
     }
 
@@ -402,7 +399,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             HashSet<Integer> binIndices;
 
             for (int i : itemsUse) {
-                binIndices = items[i].getBinIndices();
+                binIndices = newBinIndices[i];
                 if (!binIndices.contains(bins[b].getId())) {
                     this.notInB += 1;
                 }
@@ -421,7 +418,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
         }
 
         public void addItem(int i) {
-            if (!items[i].getBinIndices().contains(bins[b].getId())) {
+            if (!newBinIndices[i].contains(bins[b].getId())) {
                 this.notInB += 1;
             }
             this.nItem += 1;
@@ -437,7 +434,7 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
         }
 
         public void removeItem(int i) {
-            if (!items[i].getBinIndices().contains(bins[b].getId())) {
+            if (!newBinIndices[i].contains(bins[b].getId())) {
                 this.notInB -= 1;
             }
             this.nItem -= 1;
@@ -466,7 +463,6 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             Scanner sc = new Scanner(file);
             int i = 0;
             while (sc.hasNextInt()) {
-
                 int b = sc.nextInt();
                 if (availR.contains(items[i].getR())) {
                     take[i] = b;
@@ -480,21 +476,6 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
             sc.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-        }
-        itemsUse.clear();
-        binsUse.clear();
-        for (int i = 0; i < n; i++) {
-            if (take[i] == NOT_USE_FOREVER || !availR.contains(items[i].getR())) {
-                take[i] = NOT_USE_FOREVER;
-            } else {
-                itemsUse.add(i);
-            }
-        }
-
-        for (int b = 0; b < m; b++) {
-            if (bins[b].getUse() != NOT_USE_FOREVER) {
-                binsUse.add(b);
-            }
         }
     }
 
@@ -629,5 +610,4 @@ public abstract class MinMaxTypeMultiKnapsackSolution {
     public MinMaxTypeMultiKnapsackInputItem[] getItems() {
         return items;
     }
-
 }

@@ -217,35 +217,47 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
         int r = items[i].getR();
         HashSet<Integer> binIndices = newBinIndices[i];
 
-        if (oldBin != NOT_USE_FOREVER) {
-            sumW[oldBin] -= items[i].getW();
-            sumP[oldBin] -= items[i].getP();
-            if (!binIndices.contains(bins[oldBin].getId())) {
-                notInB[oldBin] -= 1;
-            }
-            if (typePerBin[oldBin].get(t) == 1) {
-                nTypePerBin[oldBin] -= 1;
-            }
-            if (classPerBin[oldBin].get(r) == 1) {
-                nClassPerBin[oldBin] -= 1;
-            }
-            nItemPerBin[oldBin]--;
+        sumW[oldBin] -= items[i].getW();
+        sumP[oldBin] -= items[i].getP();
+        if (!binIndices.contains(bins[oldBin].getId())) {
+            notInB[oldBin] -= 1;
         }
+        if (typePerBin[oldBin].get(t) == 1) {
+            nTypePerBin[oldBin] -= 1;
+            typePerBin[oldBin].remove(t);
+        } else {
+            typePerBin[oldBin].replace(t, typePerBin[oldBin].get(t) - 1);
+        }
+        if (classPerBin[oldBin].get(r) == 1) {
+            nClassPerBin[oldBin] -= 1;
+            classPerBin[oldBin].remove(r);
+        } else {
+            classPerBin[oldBin].replace(r, classPerBin[oldBin].get(r) - 1);
+        }
+        nItemPerBin[oldBin]--;
+        itemPerBin[oldBin].remove(i);
 
-        if (newBin != NOT_USE_FOREVER) {
-            sumW[newBin] += items[i].getW();
-            sumP[newBin] += items[i].getP();
-            if (!binIndices.contains(bins[newBin].getId())) {
-                notInB[newBin] += 1;
-            }
-            if (!typePerBin[newBin].containsKey(t)) {
-                nTypePerBin[newBin] += 1;
-            }
-            if (!classPerBin[newBin].containsKey(r)) {
-                nClassPerBin[newBin] += 1;
-            }
-            nItemPerBin[newBin]++;
+
+        sumW[newBin] += items[i].getW();
+        sumP[newBin] += items[i].getP();
+        if (!binIndices.contains(bins[newBin].getId())) {
+            notInB[newBin] += 1;
         }
+        if (!typePerBin[newBin].containsKey(t)) {
+            nTypePerBin[newBin] += 1;
+            typePerBin[newBin].put(t, 1);
+        } else {
+            typePerBin[newBin].replace(t, typePerBin[newBin].get(t) + 1);
+        }
+        
+        if (!classPerBin[newBin].containsKey(r)) {
+            nClassPerBin[newBin] += 1;
+            classPerBin[newBin].put(r, 1);
+        } else {
+            classPerBin[newBin].replace(r, classPerBin[newBin].get(r) + 1);
+        }
+        nItemPerBin[newBin]++;
+        itemPerBin[newBin].add(i);
     }
 
     @Override
@@ -277,16 +289,18 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
         double sumV = best;
         int[] x_best = new int[maxI + 1];
 
-        for (int i : itemsUse) x_best[i] = take[i];
+        for (int i : itemsUse) {
+            int b = take[i];
+            x_best[i] = b;
+            if(b != NOT_USE_FOREVER) itemPerBin[b].add(i);
+        }
 
-        System.out.println("TabuSearch, init S = " + violations());
+        System.out.println("TabuSearch, init S = " + sumV);
         int nic = 0;
         ArrayList<AssignMove> moves = new ArrayList<AssignMove>();
         Random R = new Random();
         while (it < maxIter && System.currentTimeMillis() - t0 < maxTime
                 && sumV > 0) {
-            int sel_i = -1;
-            int sel_v = -1;
             double minDelta = Double.MAX_VALUE;
             moves.clear();
 
@@ -304,15 +318,8 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
                 }
             }
             int b_ucv = maxVioBin.get(R.nextInt(maxVioBin.size()));
-
-            ArrayList<Integer> itemUcvs = new ArrayList<Integer>();
-            for (int i : itemsUse) {
-                if (take[i] == b_ucv) {
-                    itemUcvs.add(i);
-                }
-            }
-            //System.out.println(itemUcvs);
-            int item_ucv = itemUcvs.get(R.nextInt(itemUcvs.size()));
+            ArrayList<Integer> itemsUcv = new ArrayList<Integer>(itemPerBin[b_ucv]);
+            int item_ucv = itemsUcv.get(R.nextInt(itemsUcv.size()));
             for (int b : newBinIndices[item_ucv]) {
                 double delta = getAssignDelta(b, item_ucv);
 
@@ -329,13 +336,14 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
 
             if (moves.size() <= 0) {
                 restartMaintainConstraint(tabu, binsUse, itemsUse);
-                System.out.println("TabuSearch::restart..... S = " + violations());
+                sumV = violations();
+                System.out.println("TabuSearch::restart..... S = " + sumV);
                 nic = 0;
             } else {
                 // perform the move
                 AssignMove m = moves.get(R.nextInt(moves.size()));
-                sel_i = m.i;
-                sel_v = m.newBin;
+                int sel_i = m.i;
+                int sel_v = m.newBin;
                 assignPropagate(sel_i, sel_v);
                 tabu[sel_i - minI][sel_v - minB] = it + tabulen;
                 
@@ -359,7 +367,8 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
                     nic++;
                     if (nic > maxStable) {
                         restartMaintainConstraint(tabu, binsUse, itemsUse);
-                        System.out.println("TabuSearch::restart..... S = " + violations());
+                        sumV = violations();
+                        System.out.println("TabuSearch::restart..... S = " + sumV);
                         nic = 0;
                     }
                 } else {
@@ -452,10 +461,10 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
             dataset_path);
         solution.preprocess();
         solution.info();
-        //solution.initModel();
-        solution.loadPretrainedModel();
-        //solution.tabuSearch(10, 5000, 50000, 1000, solution.getBinsUse(), solution.getItemsUse()); // Cho tap du lieu 51004418316727.json
-        //solution.writeSolution();
+        solution.initModel();
+        //solution.loadPretrainedModel();
+        solution.tabuSearch(10, 5000, 150000, 1000, solution.getBinsUse(), solution.getItemsUse()); // Cho tap du lieu 51004418316727.json
+        solution.writeSolution();
         HashSet<Integer> classNotArrage = solution.getClassNotArrange();
         HashSet<Integer> tabu = solution.getSolutionBins();
         HashSet<Integer> binNotUse = solution.getBinsNotUse();
@@ -463,7 +472,7 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
         System.out.println(classNotArrage);
         //classNotArrage.clear();
         //classNotArrage.add(16);
-
+        /*
         HashMap<Integer, HashSet<Integer>> tempBinUse = new HashMap<Integer, HashSet<Integer>>();
         for (int r : classNotArrage) {
             for (int i = 0; i < solution.getN(); i++) {
@@ -532,7 +541,7 @@ public class MinMaxTypeMultiKnapsackSolutionPhase1 extends MinMaxTypeMultiKnapsa
                     }
                 }
             }
-        }
+        }*/
 
         //solution.printSolution();
     }
