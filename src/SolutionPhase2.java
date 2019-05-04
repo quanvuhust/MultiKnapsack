@@ -110,8 +110,8 @@ public class SolutionPhase2 extends Solution {
 				for(int i: binXOld) allItemTwoBin.add(i);
 				for(int i: binYOld) allItemTwoBin.add(i);
 
-				MaxNumberItemAbin sol = new MaxNumberItemAbin(items, bins, newBinIndices);
-				sol.search(5, 5000, 4000, 200, b_x, allItemTwoBin, binXNew, binYNew);
+				MaxNumberItemAbin sol = new MaxNumberItemAbin(items, bins, newBinIndices, seed);
+				sol.search(5, 5000, 1500, 100, b_x, allItemTwoBin, binXNew, binYNew);
 				newViolation = violations(binXNew, b_x) + violations(binYNew, b_y);
 			} else if(rBxOld != -1 && rByOld == -1) {
 				//System.out.println("Max number items in bin " + b_y);
@@ -119,8 +119,8 @@ public class SolutionPhase2 extends Solution {
 				for(int i: binXOld) allItemTwoBin.add(i);
 				for(int i: binYOld) allItemTwoBin.add(i);
 				
-				MaxNumberItemAbin sol = new MaxNumberItemAbin(items, bins, newBinIndices);
-				sol.search(5, 5000, 4000, 200, b_y, allItemTwoBin, binYNew, binXNew);
+				MaxNumberItemAbin sol = new MaxNumberItemAbin(items, bins, newBinIndices, seed);
+				sol.search(5, 5000, 1500, 100, b_y, allItemTwoBin, binYNew, binXNew);
 				newViolation = violations(binXNew, b_x) + violations(binYNew, b_y);
 			} else {
 				//System.out.println("Balance 2 bin " + b_x + "-" + b_y);
@@ -131,15 +131,15 @@ public class SolutionPhase2 extends Solution {
 
 				ArrayList<Integer> binXNew1 = new ArrayList<Integer>();
 				ArrayList<Integer> binYNew1 = new ArrayList<Integer>();
-				MaxNumberItemAbin sol1 = new MaxNumberItemAbin(items, bins, newBinIndices);
-				sol1.search(5, 5000, 4000, 200, b_x, allItemTwoBin, binXNew1, binYNew1);
+				MaxNumberItemAbin sol1 = new MaxNumberItemAbin(items, bins, newBinIndices, seed);
+				sol1.search(5, 5000, 1500, 100, b_x, allItemTwoBin, binXNew1, binYNew1);
 				double newViolation1 = violations(binXNew1, b_x) + violations(binYNew1, b_y);
 
 				// Chi su dung 1 bin y	
 				ArrayList<Integer> binXNew2 = new ArrayList<Integer>();
 				ArrayList<Integer> binYNew2 = new ArrayList<Integer>();
-				MaxNumberItemAbin sol2 = new MaxNumberItemAbin(items, bins, newBinIndices);
-				sol2.search(5, 5000, 4000, 200, b_y, allItemTwoBin, binYNew2, binXNew2);
+				MaxNumberItemAbin sol2 = new MaxNumberItemAbin(items, bins, newBinIndices, seed);
+				sol2.search(5, 5000, 1500, 100, b_y, allItemTwoBin, binYNew2, binXNew2);
 				double newViolation2 = violations(binXNew2, b_x) + violations(binYNew2, b_y);
 				
 				binXNew.clear();
@@ -163,7 +163,7 @@ public class SolutionPhase2 extends Solution {
 	private void restartMaintainConstraint(int[][] tabu) {
 		ArrayList<Integer> binXNew = new ArrayList<Integer>();
 		ArrayList<Integer> binYNew = new ArrayList<Integer>();
-		Collections.shuffle(binsUse);
+		Collections.shuffle(binsUse, new Random(seed));
 		int len = binsUse.size();
 		for(int k = 0; k < len/2; k++) {
 			binXNew.clear();
@@ -238,7 +238,7 @@ public class SolutionPhase2 extends Solution {
 		System.out.println("TabuSearch, init S = " + best);
 		int nic = 0;
 		ArrayList<SwapMove> moves = new ArrayList<SwapMove>();
-		Random R = new Random();
+		Random R = new Random(seed);
 		ArrayList<Integer> binsUseVail = new ArrayList<Integer>(binsUse);
 		System.out.println("bin use size: " + binsUse.size());
 		while (it < maxIter && System.currentTimeMillis() - t0 < maxTime
@@ -283,7 +283,7 @@ public class SolutionPhase2 extends Solution {
 				//System.out.println("Processing bin " + b_ucv + " and " + b + ": delta = " + delta);
 				
 				if(delta < 0) {
-					System.out.println("Press Enter to continue");
+					System.out.println("Press Enter to continue " + delta);
 					try{System.in.read();}
 					catch(Exception e){}
 				}
@@ -496,7 +496,7 @@ public class SolutionPhase2 extends Solution {
 
 		// solution.loadData("src/khmtk60/miniprojects/multiknapsackminmaxtypeconstraints/MinMaxTypeMultiKnapsackInput.json");
 		solution.loadData(
-				"./dataset/MinMaxTypeMultiKnapsackInput-1000.json");
+				"./dataset/MinMaxTypeMultiKnapsackInput-3000.json");
 		solution.preprocess();
 		solution.loadPretrainedModel();
 		/*
@@ -505,7 +505,7 @@ public class SolutionPhase2 extends Solution {
 		}*/
 		//System.out.println(" Test result: " + solution.testSwapDelta(505, 514));
 		
-		solution.tabuSearch(10, 5000, 50, 10, solution.getBinsUse(), solution.getItemsUse()); // Cho tap du lieu 51004418316727.json
+		solution.tabuSearch(10, 5000, 100, 10, solution.getBinsUse(), solution.getItemsUse()); // Cho tap du lieu 51004418316727.json
 		solution.writeSolution();
 		solution.writeSubmit();
 		solution.printSolution();

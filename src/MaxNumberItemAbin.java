@@ -5,10 +5,11 @@ public class MaxNumberItemAbin extends Solution {
 	ArrayList<Integer> itemsAvail = new ArrayList<Integer>();
 	ArrayList<Integer> itemsNotAvail = new ArrayList<Integer>();
 	public MaxNumberItemAbin(MinMaxTypeMultiKnapsackInputItem items[], MinMaxTypeMultiKnapsackInputBin bins[],
-								HashSet<Integer> newBinIndices[]) {
+								HashSet<Integer> newBinIndices[], int seed) {
 		this.items = items;
 		this.bins = bins;
 		this.newBinIndices = newBinIndices;
+		this.seed = seed;
 	}
 
 	public double violations(int b) {
@@ -55,7 +56,7 @@ public class MaxNumberItemAbin extends Solution {
 	}
 
 	private void restartOfMaxNumItemInABin(int[][] tabu, StatusOfBin status, ArrayList<Integer> itemsUse, int x_take[]) {
-		Random rand = new Random();
+		Random rand = new Random(this.seed);
 		for (int k = 0; k < itemsUse.size(); k++) {
 			int i = itemsUse.get(k);
 			java.util.ArrayList<Integer> L = new java.util.ArrayList<Integer>();
@@ -113,7 +114,7 @@ public class MaxNumberItemAbin extends Solution {
 
 		int nic = 0;
 		ArrayList<AssignMove> moves = new ArrayList<AssignMove>();
-		Random R = new Random();
+		Random R = new Random(this.seed);
 		
 		while (it < maxIter && System.currentTimeMillis() - t0 < maxTime
 				&& sumV  > 0) {
