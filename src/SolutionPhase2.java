@@ -5,10 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.util.*;
 
-public class SolutionPhase2 extends Solution{
+public class SolutionPhase2 extends Solution {
 	private final int DEBUG = 0;
 	
-	@Override
 	public double violations(int b) {
 		double sumViolation = 0;
 
@@ -30,7 +29,6 @@ public class SolutionPhase2 extends Solution{
 		return sumViolation;
 	}
 
-	@Override
 	public double violations(ArrayList<Integer> a, int b) {
 		double sumViolation = 0;
 		double sumW = 0;
@@ -76,375 +74,10 @@ public class SolutionPhase2 extends Solution{
 
 		return sumViolation;
 	}
-
-	public double getAssignDeltaOfBalanceTwoBin(int oldBin, int newBin, StatusOfBin statusX, StatusOfBin statusY, int i, int nItem) {
-		double vioOld = violationsOfBalanceTwoBin(statusX, nItem) + violationsOfBalanceTwoBin(statusY, nItem);
-		int b_x = statusX.b;
-		int b_y = statusY.b;
-		if(oldBin == b_x && newBin == b_y) {
-			statusY.addItem(i);
-			statusX.removeItem(i);
-		} else if(oldBin == b_y && newBin == b_x) {
-			statusY.removeItem(i);
-			statusX.addItem(i);
-		} else {
-			return 0;
-		}
-		double vioNew = violationsOfBalanceTwoBin(statusX, nItem) + violationsOfBalanceTwoBin(statusY, nItem);
-		if(oldBin == b_x && newBin == b_y) {
-			statusY.removeItem(i);
-			statusX.addItem(i);
-		} else if(oldBin == b_y && newBin == b_x) {
-			statusY.addItem(i);
-			statusX.removeItem(i);
-		}
-		return vioNew - vioOld;
-	}
-	
-	private double violationsOfBalanceTwoBin(StatusOfBin status, int numItem) {
-		double sumViolation = 0;
-		int b = status.b;
-
-		sumViolation += Math.max(0, status.sumW - bins[b].getCapacity());
-		//sumViolation += Math.max(0, bins[b].getMinLoad() - status.sumW);
-		sumViolation += Math.max(0, status.sumP - bins[b].getP());
-		sumViolation += Math.max(0, status.nType - bins[b].getT());
-		
-		if(bins[b].getMinLoad() - status.sumW > 0) {
-			sumViolation += ((double)status.nItem)/numItem;
-		}
-
-		return sumViolation;
-	}
-	
-	
-	private double violationsOfMaxNumItemInABin(StatusOfBin status, int numItem) {
-		double sumViolation = 0;
-		int b = status.b;
-
-		sumViolation += Math.max(0, status.sumW - bins[b].getCapacity());
-		sumViolation += Math.max(0, bins[b].getMinLoad() - status.sumW);
-		sumViolation += Math.max(0, status.sumP - bins[b].getP());
-		sumViolation += Math.max(0, status.nType - bins[b].getT());
-		
-		sumViolation += (double)(numItem - status.nItem)/numItem;
-		//System.out.println("Hehe " +  Math.max(0, bins[b].getMinLoad() - status.sumW));
-
-		return sumViolation;
-	}
-
-	private void restartOfMaxNumItemInABin(int[][] tabu, StatusOfBin status, ArrayList<Integer> itemsUse, int x_take[]) {
-		for (int k = 0; k < itemsUse.size(); k++) {
-			int i = itemsUse.get(k);
-			if(!newBinIndices[i].contains(bins[status.b].getId())) continue;
-			java.util.ArrayList<Integer> L = new java.util.ArrayList<Integer>();
-			for (int choice = 0; choice < 2; choice++) {
-				if (getAssignDeltaOfMaxNumItemInABin(x_take[k], choice, status, i, itemsUse.size()) <= 0) L.add(choice);
-			}
-			
-			if(L.size() == 0) continue;
-			int newChoice = L.get(rand.nextInt(L.size()));
-			if(x_take[k] == 0 && newChoice == 1) {
-				status.addItem(i);
-			} else if(x_take[k] == 1 && newChoice == 0) {
-				status.removeItem(i);
-			}
-			x_take[k] = newChoice;
-		}
-		
-		for (int i = 0; i < tabu.length; i++) 
-			for (int j = 0; j < tabu[i].length; j++) 
-				tabu[i][j] = -1;
-	}	
-	
-	private void maxNumItemInABin(int tabulen, int maxTime, int maxIter, int maxStable, int b, ArrayList<Integer> itemsUse, ArrayList<Integer> newBin, ArrayList<Integer> otherBin) {
-		int numItem = itemsUse.size();
-		
-		double t0 = System.currentTimeMillis();
-		
-		// System.out.println("n = " + n + ", D = " + D);
-		int tabu[][] = new int[numItem][2];
-		for (int i = 0; i < numItem; i++) 
-			for (int j = 0; j < 2; j++) 
-				tabu[i][j] = -1;
-
-		int it = 0;
-		maxTime = maxTime * 1000;// convert into milliseconds
-
-		int[] x_best = new int[numItem];
-		int[] x_take = new int[numItem];
-		
-		for (int k = 0; k < numItem; k++) x_take[k] = 0;
-		for (int k = 0; k < numItem; k++) x_best[k] = x_take[k];
-		StatusOfBin status = new StatusOfBin(b);
-		double best = violationsOfMaxNumItemInABin(status, numItem);
-		double sumV = best;
-
-		int nic = 0;
-		ArrayList<AssignMove> moves = new ArrayList<AssignMove>();
-		Random R = new Random();
-		
-		while (it < maxIter && System.currentTimeMillis() - t0 < maxTime
-				&& sumV  > 0) {
-			int sel_i = -1;
-			int sel_v = -1;
-			double minDelta = Double.MAX_VALUE;
-			moves.clear();
-			
-			for (int k = 0; k < numItem; k++) {
-				int i = itemsUse.get(k);
-				if(!items[i].getBinIndices().contains(bins[b].getId())) continue;
-				for (int choice = 0; choice < 2; choice++) {
-					double delta = getAssignDeltaOfMaxNumItemInABin(x_take[k], choice, status, i, numItem);
-					if(tabu[k][choice] <= it || sumV + delta < best) {
-						if (delta < minDelta) {
-							minDelta = delta;
-							moves.clear();
-							moves.add(new AssignMove(choice, x_take[k], k));
-						} else if (delta == minDelta) {
-							moves.add(new AssignMove(choice, x_take[k], k));
-						}
-					}
-				}
-			}
-			
-			if (moves.size() <= 0) {
-				if(DEBUG == 1) {
-					System.out.println("maxNumItemInABin::TabuSearch::restart.....");
-				}
-				
-				restartOfMaxNumItemInABin(tabu, status, itemsUse, x_take);
-				nic = 0;
-			} else {
-				// perform the move
-				AssignMove m = moves.get(R.nextInt(moves.size()));
-				sel_i = m.i;
-				sel_v = m.newBin;
-				if(x_take[sel_i] == 0 && sel_v == 1) {
-					status.addItem(itemsUse.get(sel_i));
-				} else if(x_take[sel_i] == 1 && sel_v == 0) {
-					status.removeItem(itemsUse.get(sel_i));
-				}
-				x_take[sel_i] = sel_v;
-				
-				tabu[sel_i][sel_v] = it + tabulen;
-				sumV += minDelta;
-				if(DEBUG == 1) {
-					System.out.println("maxNumItemInABin::Step " + it + ", "
-							+ "S = " + sumV
-							+ ", best = " + best + ", delta = " + minDelta
-							+ ", nic = " + nic);
-				}
-				
-				// update best
-				if (sumV < best) {
-					best = sumV;
-					for (int k = 0; k < numItem; k++) x_best[k] = x_take[k];
-				}
-
-				//if (minDelta >= 0) {
-				if(sumV >= best){
-					nic++;
-					if (nic > maxStable) {
-						if(DEBUG == 1) {
-							System.out.println("maxNumItemInABin::TabuSearch::restart.....");
-						}
-						
-						restartOfMaxNumItemInABin(tabu, status, itemsUse, x_take);
-						nic = 0;
-					}
-				} else {
-					nic = 0;
-				}
-			}
-			it++;
-		}
-		
-		for (int k = 0; k < numItem; k++) {
-			if(x_take[k] == 1) {
-				newBin.add(itemsUse.get(k));
-			} else {
-				otherBin.add(itemsUse.get(k));
-			}
-		}
-	}	
-	
-	private double getAssignDeltaOfMaxNumItemInABin(int oldChoice, int newChoice, StatusOfBin status, int i, int nItem) {
-		double vioOld = violationsOfMaxNumItemInABin(status, nItem);
-		if(oldChoice == 0 && newChoice == 1) {
-			status.addItem(i);
-		} else if(oldChoice == 1 && newChoice == 0) {
-			status.removeItem(i);
-		} else {
-			return 0;
-		}
-		double vioNew = violationsOfMaxNumItemInABin(status, nItem);
-		if(oldChoice == 0 && newChoice == 1) {
-			status.removeItem(i);
-		} else if(oldChoice == 1 && newChoice == 0) {
-			status.addItem(i);
-		}
-		return vioNew - vioOld;
-	}
-	
-	private void balanceTwoBin(int tabulen, int maxTime, int maxIter, int maxStable, int b_x, int b_y, ArrayList<Integer> binXOld, ArrayList<Integer> binYOld, ArrayList<Integer> binXNew, ArrayList<Integer> binYNew) {
-		binXNew.clear();
-		binYNew.clear();
-		binXNew.addAll(binXOld);
-		binYNew.addAll(binYOld);
-		
-		double t0 = System.currentTimeMillis();
-
-		ArrayList<Integer> itemsUse = new ArrayList<Integer>(binXOld);
-		itemsUse.addAll(binYOld);
-		
-		int numItem = itemsUse.size();
-		
-		// System.out.println("n = " + n + ", D = " + D);
-		int tabu[][] = new int[numItem][2];
-		for (int i = 0; i < numItem; i++) 
-			for (int j = 0; j < 2; j++) 
-				tabu[i][j] = -1;
-
-		int it = 0;
-		maxTime = maxTime * 1000;// convert into milliseconds
-		
-		int[] x_best = new int[numItem];
-		int[] x_take = new int[numItem];
-		int[] binsUse = {b_x, b_y};
-		
-		for(int k = 0; k < binXOld.size(); k++) {
-			x_take[k] = b_x;
-		}
-		
-		for(int k = binXOld.size(); k < numItem; k++) {
-			x_take[k] = b_y;
-		}
-			
-		for (int k = 0; k < numItem; k++)
-			x_best[k] = x_take[k];
-		StatusOfBin statusX = new StatusOfBin(binXOld, b_x);
-		StatusOfBin statusY = new StatusOfBin(binYOld, b_y);
-		double best = violationsOfBalanceTwoBin(statusX, n) +
-				violationsOfBalanceTwoBin(statusY, n);
-		double sumV = best;
-		int nic = 0;
-		ArrayList<AssignMove> moves = new ArrayList<AssignMove>();
-		Random R = new Random();
-		
-		while (it < maxIter && System.currentTimeMillis() - t0 < maxTime
-				&& sumV > 0) {
-			
-			int sel_i = -1;
-			int sel_v = -1;
-			double minDelta = Double.MAX_VALUE;
-			moves.clear();
-			
-			for (int k = 0; k < numItem; k++) {
-				int i = itemsUse.get(k);
-				
-				for (int choice = 0; choice < 2; choice++) {
-					int b = binsUse[choice];
-					if(!items[i].getBinIndices().contains(bins[b].getId())) {
-						continue;
-					}
-						
-					double delta = getAssignDeltaOfBalanceTwoBin(x_take[k], b, statusX, statusY, i, n);
-					//System.out.println("Delta = " + delta + " old = " + x_take[k] + " new = " + b + " i = " + i);
-					if(tabu[k][choice] <= it || sumV + delta < best) {
-						if (delta < minDelta) {
-							minDelta = delta;
-							moves.clear();
-							moves.add(new AssignMove(b, x_take[k], k));
-						} else if (delta == minDelta) {
-							moves.add(new AssignMove(b, x_take[k], k));
-						}
-					}
-				}
-			}
-			
-			if (moves.size() <= 0) {
-				if(DEBUG == 1) {
-					System.out.println("Balance::TabuSearch::restart.....");
-				}
-				
-				restartOfBalanceTwoBin(tabu, b_x, b_y, itemsUse, x_take, statusX, statusY);
-				nic = 0;
-			} else {
-				// perform the move
-				AssignMove m = moves.get(R.nextInt(moves.size()));
-				sel_i = m.i;
-				sel_v = m.newBin;
-				if(x_take[sel_i] == b_x && sel_v == b_y) {
-					statusY.addItem(itemsUse.get(sel_i));
-					statusX.removeItem(itemsUse.get(sel_i));
-				} else if(x_take[sel_i] == b_y && sel_v == b_x) {
-					statusY.removeItem(itemsUse.get(sel_i));
-					statusX.addItem(itemsUse.get(sel_i));
-				}
-				
-				x_take[sel_i] = sel_v;
-				tabu[sel_i][sel_v == b_x ?0:1] = it + tabulen;
-				binXNew.clear();
-				binYNew.clear();
-				for (int k = 0; k < numItem; k++) {
-					int i = itemsUse.get(k);
-					if(x_best[k] == 0) {
-						binXNew.add(i);
-					} else {
-						binYNew.add(i);
-					}
-				}
-				sumV += minDelta;
-				
-				if(DEBUG == 1) {
-					System.out.println("Balance::Step " + it + ", "
-							+ "S = " + sumV
-							+ ", best = " + best + ", delta = " + minDelta
-							+ ", nic = " + nic);
-				}
-				
-				// update best
-				if (sumV < best) {
-					best = sumV;
-					for (int k = 0; k < numItem; k++)
-						x_best[k] = x_take[k];
-				}
-
-				//if (minDelta >= 0) {
-				if(sumV >= best){
-					nic++;
-					if (nic > maxStable) {
-						if(DEBUG == 1) {
-							System.out.println("Balance::TabuSearch::restart.....");
-						}
-						
-						restartOfBalanceTwoBin(tabu, b_x, b_y, itemsUse, x_take, statusX, statusY);
-						nic = 0;
-					}
-				} else {
-					nic = 0;
-				}
-			}
-			it++;
-		}
-		
-		binXNew.clear();
-		binYNew.clear();
-		for (int k = 0; k < numItem; k++) {
-			int i = itemsUse.get(k);
-			if(x_best[k] == 0) {
-				binXNew.add(i);
-			} else {
-				binYNew.add(i);
-			}
-		}
-	}
 	
 	public double getSwapDelta(int b_x, int b_y, ArrayList<Integer> binXNew, ArrayList<Integer> binYNew) {
 		binXNew.clear();
 		binYNew.clear();
-		
 		
 		ArrayList<Integer> binXOld = new ArrayList<Integer>();
 		ArrayList<Integer> binYOld = new ArrayList<Integer>();
@@ -473,27 +106,21 @@ public class SolutionPhase2 extends Solution{
 			binYNew.clear();
 			if(rBxOld == -1 && rByOld != -1) {
 				//System.out.println("Max number items in bin " + b_x);
-				if(bins[b_x].getMinLoad() >= bins[b_y].getMinLoad()) {
-                    for(int i: binYOld) binYNew.add(i);
-					return 0;
-				}
 				ArrayList<Integer> allItemTwoBin = new ArrayList<Integer>();
 				for(int i: binXOld) allItemTwoBin.add(i);
 				for(int i: binYOld) allItemTwoBin.add(i);
-				
-				maxNumItemInABin(5, 5000, 1000, 100, b_x, allItemTwoBin, binXNew, binYNew);
+
+				MaxNumberItemAbin sol = new MaxNumberItemAbin(items, bins, newBinIndices);
+				sol.search(5, 5000, 4000, 200, b_x, allItemTwoBin, binXNew, binYNew);
 				newViolation = violations(binXNew, b_x) + violations(binYNew, b_y);
 			} else if(rBxOld != -1 && rByOld == -1) {
 				//System.out.println("Max number items in bin " + b_y);
-				if(bins[b_x].getMinLoad() <= bins[b_y].getMinLoad()) {
-                    for(int i: binXOld) binXNew.add(i);
-					return 0;
-				}
 				ArrayList<Integer> allItemTwoBin = new ArrayList<Integer>();
 				for(int i: binXOld) allItemTwoBin.add(i);
 				for(int i: binYOld) allItemTwoBin.add(i);
 				
-				maxNumItemInABin(5, 5000, 1000, 100, b_y, allItemTwoBin, binYNew, binXNew);
+				MaxNumberItemAbin sol = new MaxNumberItemAbin(items, bins, newBinIndices);
+				sol.search(5, 5000, 4000, 200, b_y, allItemTwoBin, binYNew, binXNew);
 				newViolation = violations(binXNew, b_x) + violations(binYNew, b_y);
 			} else {
 				//System.out.println("Balance 2 bin " + b_x + "-" + b_y);
@@ -501,55 +128,32 @@ public class SolutionPhase2 extends Solution{
 				ArrayList<Integer> allItemTwoBin = new ArrayList<Integer>();
 				for(int i: binXOld) allItemTwoBin.add(i);
 				for(int i: binYOld) allItemTwoBin.add(i);
+
 				ArrayList<Integer> binXNew1 = new ArrayList<Integer>();
 				ArrayList<Integer> binYNew1 = new ArrayList<Integer>();
-				maxNumItemInABin(15, 5000, 1000, 100, b_x, allItemTwoBin, binXNew1, binYNew1);
+				MaxNumberItemAbin sol1 = new MaxNumberItemAbin(items, bins, newBinIndices);
+				sol1.search(5, 5000, 4000, 200, b_x, allItemTwoBin, binXNew1, binYNew1);
 				double newViolation1 = violations(binXNew1, b_x) + violations(binYNew1, b_y);
 
 				// Chi su dung 1 bin y	
 				ArrayList<Integer> binXNew2 = new ArrayList<Integer>();
 				ArrayList<Integer> binYNew2 = new ArrayList<Integer>();
-				maxNumItemInABin(15, 5000, 1000, 100, b_y, allItemTwoBin, binYNew2, binXNew2);
+				MaxNumberItemAbin sol2 = new MaxNumberItemAbin(items, bins, newBinIndices);
+				sol2.search(5, 5000, 4000, 200, b_y, allItemTwoBin, binYNew2, binXNew2);
 				double newViolation2 = violations(binXNew2, b_x) + violations(binYNew2, b_y);
 				
-				int use = -1;
+				binXNew.clear();
+				binYNew.clear();
 				if(newViolation1 < newViolation2) {
 					newViolation = newViolation1;
-					use = b_x;
+					for(int i: binXNew1) binXNew.add(i);
+					for(int i: binYNew1) binYNew.add(i);
 				} else {
 					newViolation = newViolation2;
-					use = b_y;
-				}
-				
-
-				// Su dung ca 2 bin
-				balanceTwoBin(5, 500, 1000,
-						100, b_x, b_y, 
-						binXOld, binYOld,
-						binXNew, binYNew) ;
-				
-				double newViolation3 = violations(binXNew, b_x) + violations(binYNew, b_y);
-				/*
-				if(b_y == 514) {
-					
-					System.out.println(newViolation);
-					System.out.println(newViolation3);
-				}*/
-				if(newViolation3 < newViolation) {
-					newViolation = newViolation3;
-				} else {
-					binXNew.clear();
-					binYNew.clear();
-					if(use == b_x) {
-						for(int i: binXNew1) binXNew.add(i);
-						for(int i: binYNew1) binYNew.add(i);
-					} else {
-						for(int i: binXNew2) binXNew.add(i);
-						for(int i: binYNew2) binYNew.add(i);
-					}
+					for(int i: binXNew2) binXNew.add(i);
+					for(int i: binYNew2) binYNew.add(i);
 				}
 			}
-			
 		}
 		double oldViolation = violations(binXOld, b_x) + violations(binYOld, b_y);	
 		
@@ -578,47 +182,10 @@ public class SolutionPhase2 extends Solution{
 		
 	}
 	
-	private void restartOfBalanceTwoBin(int[][] tabu, int b_x, int b_y, ArrayList<Integer> itemsUse, int x_take[], StatusOfBin statusX, StatusOfBin statusY) {	
-		int numItem = itemsUse.size();
-		for (int k = 0; k < numItem; k++) {
-			int i = itemsUse.get(k);
-			java.util.ArrayList<Integer> L = new java.util.ArrayList<Integer>();
-			for (int choice = 0; choice < 2; choice++) {
-				int b = x_take[choice];
-				if(!items[i].getBinIndices().contains(bins[b].getId())) {
-					continue;
-				}
-				if (getAssignDeltaOfBalanceTwoBin(x_take[k], b, statusX, statusY, i, n) <= 0)
-					L.add(b);
-			}
-			
-			if(L.size() == 0) {
-				continue;
-			}
-			
-			int oldBin = x_take[k];
-			int newBin = L.get(rand.nextInt(L.size()));
-			if(oldBin == b_x && newBin == b_y) {
-				statusY.addItem(i);
-				statusX.removeItem(i);
-			} else if(oldBin == b_y && newBin == b_x) {
-				statusY.removeItem(i);
-				statusX.addItem(i);
-			}
-			x_take[k] = newBin;
-		}
-		
-		for (int i = 0; i < tabu.length; i++) {
-			for (int j = 0; j < tabu[i].length; j++)
-				tabu[i][j] = -1;
-		}
-	}
-	
 	public void updateBest(){
 		
 	}
 	
-	@Override
 	public void tabuSearch(int tabulen, int maxTime, int maxIter, int maxStable, ArrayList<Integer> binsUse, ArrayList<Integer> itemsUse) {
 		double sumV = 0;
 		double t0 = System.currentTimeMillis();
@@ -645,20 +212,12 @@ public class SolutionPhase2 extends Solution{
 		});
 		
 		for(int b: binsUse) {
-			if(minB > b) {
-				minB = b;
-			}
-			if(maxB < b) {
-				maxB = b;
-			}
+			if(minB > b) minB = b;
+			if(maxB < b) maxB = b;
 		}
 		for(int i: itemsUse) {
-			if(minI > i) {
-				minI = i;
-			}
-			if(maxI < i) {
-				maxI = i;
-			}
+			if(minI > i) minI = i;
+			if(maxI < i) maxI = i;
 		}
 		int DB = maxB - minB;
 		int DI = maxI - minI;
@@ -676,7 +235,7 @@ public class SolutionPhase2 extends Solution{
 		for (int i:itemsUse)
 			x_best[i] = binOfItem[i];
 
-		System.out.println("TabuSearch, init S = " + violations());
+		System.out.println("TabuSearch, init S = " + best);
 		int nic = 0;
 		ArrayList<SwapMove> moves = new ArrayList<SwapMove>();
 		Random R = new Random();
@@ -721,7 +280,7 @@ public class SolutionPhase2 extends Solution{
 				double delta = getSwapDelta(b_ucv, b, binXNew, binYNew);	
 				
 				
-				System.out.println("Processing bin " + b_ucv + " and " + b + ": delta = " + delta);
+				//System.out.println("Processing bin " + b_ucv + " and " + b + ": delta = " + delta);
 				
 				if(delta < 0) {
 					System.out.println("Press Enter to continue");
@@ -809,7 +368,7 @@ public class SolutionPhase2 extends Solution{
 	    }
 
 	}
-	
+	/*
 	public double testSwapDelta(int b_x, int b_y) {
 		ArrayList<Integer> binXNew = new ArrayList<Integer>();
 		ArrayList<Integer> binYNew = new ArrayList<Integer>();
@@ -927,7 +486,7 @@ public class SolutionPhase2 extends Solution{
 		System.out.println(oldViolation);
 		return newViolation - oldViolation;
 	}
-
+	*/
 	/**
 	 * @param args
 	 */
@@ -946,10 +505,10 @@ public class SolutionPhase2 extends Solution{
 		}*/
 		//System.out.println(" Test result: " + solution.testSwapDelta(505, 514));
 		
-		solution.tabuSearch(10, 5000, 10, 10, solution.getBinsUse(), solution.getItemsUse()); // Cho tap du lieu 51004418316727.json
-		//solution.writeSolution();
-		//solution.writeSubmit();
-		//solution.printSolution();
+		solution.tabuSearch(10, 5000, 50, 10, solution.getBinsUse(), solution.getItemsUse()); // Cho tap du lieu 51004418316727.json
+		solution.writeSolution();
+		solution.writeSubmit();
+		solution.printSolution();
 	}
 
 }

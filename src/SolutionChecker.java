@@ -14,6 +14,7 @@ public class SolutionChecker {
 
 	public String check(String inputJson, String outputJson){
 		try{
+			System.out.println(inputJson);
 			Reader readerInput = new FileReader(inputJson);
 			Reader readerOutput = new FileReader(outputJson);
 			Gson gson = new Gson();

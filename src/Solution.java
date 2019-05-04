@@ -390,19 +390,24 @@ public abstract class Solution {
 
     public class StatusOfBin {
         public HashMap<Integer, Integer> type;
+        public HashMap<Integer, Integer> clas;
         public int nType;
         public int nItem;
+        public int nClass;
         public double sumW;
         public double sumP;
         public int b;
         public int notInB;
-        public StatusOfBin(int b, HashMap<Integer, Integer> type, int nType, int nItem, double sumW, double sumP) {
+        public StatusOfBin(int b, HashMap<Integer, Integer> type, int nType, int nItem, double sumW, double sumP,
+                                int nClass, HashMap<Integer, Integer> clas) {
             this.type = type;
             this.nType = nType;
             this.nItem = nItem;
             this.sumW = sumW;
             this.sumP = sumP;
             this.b = b;
+            this.nClass = nClass;
+            this.clas = clas;
         }
 
         public StatusOfBin(int b) {
@@ -410,9 +415,11 @@ public abstract class Solution {
             this.notInB = 0;
             this.nItem = 0;
             this.nType = 0;
+            this.nClass = 0;
             this.sumW = 0;
             this.sumP = 0;
             this.type = new HashMap<Integer, Integer>();
+            this.clas = new HashMap<Integer, Integer>();
         }
 
         public StatusOfBin(ArrayList<Integer> itemsUse, int b) {
@@ -420,11 +427,13 @@ public abstract class Solution {
             this.notInB = 0;
             this.nItem = itemsUse.size();
             this.nType = 0;
+            this.nClass = 0;
             this.sumW = 0;
             this.sumP = 0;
             this.type = new HashMap<Integer, Integer>();
+            this.clas = new HashMap<Integer, Integer>();
 
-            int t = 0;
+            int t = 0, r = 0;
 
             HashSet<Integer> binIndices;
 
@@ -437,11 +446,19 @@ public abstract class Solution {
                 this.sumW += items[i].getW();
                 this.sumP += items[i].getP();
                 t = items[i].getT();
+                r = items[i].getR();
+
                 if (!this.type.containsKey(t)) {
                     this.nType += 1;
                     this.type.put(t, 1);
                 } else {
                     this.type.replace(t, this.type.get(t) + 1);
+                }
+                if (!this.clas.containsKey(r)) {
+                    this.nClass += 1;
+                    this.clas.put(r, 1);
+                } else {
+                    this.clas.replace(r, this.clas.get(r) + 1);
                 }
             }
 
@@ -455,11 +472,18 @@ public abstract class Solution {
             this.sumW += items[i].getW();
             this.sumP += items[i].getP();
             int t = items[i].getT();
+            int r = items[i].getR();
             if (!this.type.containsKey(t)) {
                 this.nType += 1;
                 this.type.put(t, 1);
             } else {
                 this.type.replace(t, this.type.get(t) + 1);
+            }
+            if (!this.clas.containsKey(r)) {
+                this.nClass += 1;
+                this.clas.put(r, 1);
+            } else {
+                this.clas.replace(r, this.clas.get(r) + 1);
             }
         }
 
@@ -471,6 +495,7 @@ public abstract class Solution {
             this.sumW -= items[i].getW();
             this.sumP -= items[i].getP();
             int t = items[i].getT();
+            int r = items[i].getR();
 
             if (this.type.get(t) == 1) {
                 this.nType -= 1;
@@ -478,10 +503,14 @@ public abstract class Solution {
             } else {
                 this.type.replace(t, this.type.get(t) - 1);
             }
+            if (this.clas.get(r) == 1) {
+                this.nClass -= 1;
+                this.clas.remove(r);
+            } else {
+                this.clas.replace(r, this.clas.get(r) - 1);
+            }
         }
     }
-
-    public abstract void tabuSearch(int tabulen, int maxTime, int maxIter, int maxStable, ArrayList<Integer> binsUse, ArrayList<Integer> itemsUse);
 
     public void loadPretrainedModel() {
         String[] tmp = inputPath.split("/");

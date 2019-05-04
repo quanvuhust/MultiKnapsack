@@ -30,7 +30,6 @@ public class SolutionPhase1 extends Solution {
         //sumViolation += Math.max(0, bins[b].getMinLoad() - sumW[b])/maxLoad;
         return sumViolation;
     }
-
     @Override
     public double violations(ArrayList<Integer> a, int b) {
         double sumViolation = 0;
@@ -265,7 +264,6 @@ public class SolutionPhase1 extends Solution {
         itemPerBin[newBin].add(i);
     }
 
-    @Override
     public void tabuSearch(int tabulen, int maxTime, int maxIter, int maxStable, ArrayList<Integer> binsUse, ArrayList<Integer> itemsUse) {
         this.binsUse = binsUse;
         this.itemsUse = itemsUse;
